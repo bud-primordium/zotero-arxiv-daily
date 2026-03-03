@@ -5,22 +5,10 @@ from ..protocol import Paper
 from ..utils import extract_markdown_from_pdf
 from tempfile import TemporaryDirectory
 import feedparser
-import urllib.request
+from urllib.request import urlretrieve
 from tqdm import tqdm
 import os
-import signal
 from loguru import logger
-
-class _Timeout:
-    def __init__(self, seconds):
-        self.seconds = seconds
-    def __enter__(self):
-        self._old = signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError()))
-        signal.alarm(self.seconds)
-    def __exit__(self, *args):
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, self._old)
-
 @register_retriever("arxiv")
 class ArxivRetriever(BaseRetriever):
     def __init__(self, config):
@@ -57,13 +45,10 @@ class ArxivRetriever(BaseRetriever):
         pdf_url = raw_paper.pdf_url
         full_text = None
         try:
-            with _Timeout(120):
-                with TemporaryDirectory() as temp_dir:
-                    path = os.path.join(temp_dir, "paper.pdf")
-                    urllib.request.urlretrieve(pdf_url, path)
-                    full_text = extract_markdown_from_pdf(path)
-        except TimeoutError:
-            logger.warning(f"Timeout processing {title}")
+            with TemporaryDirectory() as temp_dir:
+                path = os.path.join(temp_dir, "paper.pdf")
+                urlretrieve(pdf_url, path)
+                full_text = extract_markdown_from_pdf(path)
         except Exception as e:
             logger.warning(f"Failed to extract full text of {title}: {e}")
         return Paper(

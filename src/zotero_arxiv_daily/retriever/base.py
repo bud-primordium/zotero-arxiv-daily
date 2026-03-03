@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from omegaconf import DictConfig
 from ..protocol import Paper, RawPaperItem
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
 from typing import Type
 from loguru import logger
 class BaseRetriever(ABC):
@@ -23,8 +23,18 @@ class BaseRetriever(ABC):
         papers = []
         logger.info("Processing papers...")
         with ProcessPoolExecutor(max_workers=self.config.executor.max_workers) as exec_pool:
-            papers = list(exec_pool.map(self.convert_to_paper, raw_papers))
-        return [p for p in papers if p is not None]
+            futures = {exec_pool.submit(self.convert_to_paper, rp): rp for rp in raw_papers}
+            for future in as_completed(futures):
+                try:
+                    paper = future.result(timeout=120)
+                    if paper is not None:
+                        papers.append(paper)
+                except TimeoutError:
+                    logger.warning(f"Timeout processing paper, skipping")
+                    future.cancel()
+                except Exception as e:
+                    logger.warning(f"Error processing paper: {e}")
+        return papers
 
 registered_retrievers = {}
 
