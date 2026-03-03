@@ -51,9 +51,7 @@ class Executor:
             logger.info(f"Excluding zotero papers matching exclude_path: {self.config.zotero.exclude_path}")
             new_corpus = [c for c in new_corpus if not any(glob_match(p, self.config.zotero.exclude_path) for p in c.paths)]
         if self.config.zotero.include_path or self.config.zotero.exclude_path:
-            samples = random.sample(new_corpus, min(5, len(new_corpus)))
-            samples = '\n'.join([c.title + ' - ' + '\n'.join(c.paths) for c in samples])
-            logger.info(f"Selected {len(new_corpus)} zotero papers:\n{samples}\n...")
+            logger.info(f"Selected {len(new_corpus)} zotero papers after filtering")
         return new_corpus
 
     

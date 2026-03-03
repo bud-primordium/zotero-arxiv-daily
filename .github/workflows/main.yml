@@ -29,6 +29,4 @@ jobs:
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
           printf "%b\n" "$CUSTOM_CONFIG" > config/custom.yaml
-          echo "Use custom config: "
-          cat config/custom.yaml
           uv run src/zotero_arxiv_daily/main.py
