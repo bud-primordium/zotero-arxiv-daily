@@ -1,7 +1,7 @@
 zotero:
   user_id: ${oc.env:ZOTERO_ID}
   api_key: ${oc.env:ZOTERO_KEY}
-  include_path: null
+  exclude_path: "20260205_文献引用协助查找/**"
 
 email:
   sender: ${oc.env:SENDER}
@@ -15,12 +15,14 @@ llm:
     key: ${oc.env:OPENAI_API_KEY}
     base_url: ${oc.env:OPENAI_API_BASE}
   generation_kwargs:
-    model: gpt-4o-mini
+    model: gpt-5.2-medium
+  language: Chinese
 
 source:
   arxiv:
-    category: ["cs.AI","cs.CV","cs.LG","cs.CL"]
+    category: ["cond-mat.mtrl-sci","cond-mat.dis-nn","cond-mat.stat-mech","physics.comp-ph"]
 
 executor:
   debug: ${oc.env:DEBUG,null}
+  max_paper_num: 30
   source: ['arxiv']

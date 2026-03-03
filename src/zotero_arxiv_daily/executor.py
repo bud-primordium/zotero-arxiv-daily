@@ -43,17 +43,17 @@ class Executor:
         ) for c in corpus]
     
     def filter_corpus(self, corpus:list[CorpusPaper]) -> list[CorpusPaper]:
-        if not self.config.zotero.include_path:
-            return corpus
-        new_corpus = []
-        logger.info(f"Selecting zotero papers matching include_path: {self.config.zotero.include_path}")
-        for c in corpus:
-            match_results = [glob_match(p, self.config.zotero.include_path) for p in c.paths]
-            if any(match_results):
-                new_corpus.append(c)
-        samples = random.sample(new_corpus, min(5, len(new_corpus)))
-        samples = '\n'.join([c.title + ' - ' + '\n'.join(c.paths) for c in samples])
-        logger.info(f"Selected {len(new_corpus)} zotero papers:\n{samples}\n...")
+        new_corpus = corpus
+        if self.config.zotero.include_path:
+            logger.info(f"Selecting zotero papers matching include_path: {self.config.zotero.include_path}")
+            new_corpus = [c for c in new_corpus if any(glob_match(p, self.config.zotero.include_path) for p in c.paths)]
+        if self.config.zotero.exclude_path:
+            logger.info(f"Excluding zotero papers matching exclude_path: {self.config.zotero.exclude_path}")
+            new_corpus = [c for c in new_corpus if not any(glob_match(p, self.config.zotero.exclude_path) for p in c.paths)]
+        if self.config.zotero.include_path or self.config.zotero.exclude_path:
+            samples = random.sample(new_corpus, min(5, len(new_corpus)))
+            samples = '\n'.join([c.title + ' - ' + '\n'.join(c.paths) for c in samples])
+            logger.info(f"Selected {len(new_corpus)} zotero papers:\n{samples}\n...")
         return new_corpus
 
     

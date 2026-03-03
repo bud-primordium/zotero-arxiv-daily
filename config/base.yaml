@@ -2,6 +2,7 @@ zotero:
   user_id: ??? # User ID of your Zotero account.
   api_key: ??? # An Zotero API key with read access.
   include_path: null # A glob pattern marking the Zotero collections that should be included. Example: "2026/survey/**"
+  exclude_path: null # A glob pattern marking the Zotero collections that should be excluded. Example: "20260205_文献引用协助查找/**"
 
 source:
   arxiv:
