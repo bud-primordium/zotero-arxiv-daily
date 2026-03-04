@@ -8,7 +8,13 @@ import feedparser
 from urllib.request import urlopen
 from tqdm import tqdm
 import os
+import time
+import shutil
 from loguru import logger
+
+_DOWNLOAD_TIMEOUT = 120  # total seconds for downloading one PDF
+_SOCKET_TIMEOUT = 30     # per-socket-operation timeout
+
 @register_retriever("arxiv")
 class ArxivRetriever(BaseRetriever):
     def __init__(self, config):
@@ -38,6 +44,20 @@ class ArxivRetriever(BaseRetriever):
 
         return raw_papers
 
+    @staticmethod
+    def _download_with_timeout(url: str, path: str):
+        """Download file with both per-socket and total timeout."""
+        start = time.monotonic()
+        with urlopen(url, timeout=_SOCKET_TIMEOUT) as resp:
+            with open(path, 'wb') as f:
+                while True:
+                    if time.monotonic() - start > _DOWNLOAD_TIMEOUT:
+                        raise TimeoutError(f"Download exceeded {_DOWNLOAD_TIMEOUT}s")
+                    chunk = resp.read(64 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+
     def convert_to_paper(self, raw_paper:ArxivResult) -> Paper:
         title = raw_paper.title
         authors = [a.name for a in raw_paper.authors]
@@ -47,9 +67,7 @@ class ArxivRetriever(BaseRetriever):
         try:
             with TemporaryDirectory() as temp_dir:
                 path = os.path.join(temp_dir, "paper.pdf")
-                resp = urlopen(pdf_url, timeout=60)
-                with open(path, 'wb') as f:
-                    f.write(resp.read())
+                self._download_with_timeout(pdf_url, path)
                 full_text = extract_markdown_from_pdf(path)
         except Exception as e:
             logger.warning(f"Failed to extract full text of {title}: {e}")

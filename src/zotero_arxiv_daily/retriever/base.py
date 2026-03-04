@@ -4,6 +4,9 @@ from ..protocol import Paper, RawPaperItem
 from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
 from typing import Type
 from loguru import logger
+
+_GLOBAL_TIMEOUT = 1200  # 20 minutes max for all papers
+
 class BaseRetriever(ABC):
     name: str
     def __init__(self, config:DictConfig):
@@ -24,16 +27,19 @@ class BaseRetriever(ABC):
         logger.info("Processing papers...")
         exec_pool = ProcessPoolExecutor(max_workers=self.config.executor.max_workers)
         futures = {exec_pool.submit(self.convert_to_paper, rp): rp for rp in raw_papers}
-        for future in as_completed(futures, timeout=len(raw_papers) * 120):
-            try:
-                paper = future.result(timeout=10)
-                if paper is not None:
-                    papers.append(paper)
-            except TimeoutError:
-                logger.warning("Timeout processing paper, skipping")
-            except Exception as e:
-                logger.warning(f"Error processing paper: {e}")
-        exec_pool.shutdown(wait=False, cancel_futures=True)
+        try:
+            for future in as_completed(futures, timeout=_GLOBAL_TIMEOUT):
+                try:
+                    paper = future.result()
+                    if paper is not None:
+                        papers.append(paper)
+                except Exception as e:
+                    logger.warning(f"Error processing paper: {e}")
+        except TimeoutError:
+            n_done = sum(1 for f in futures if f.done())
+            logger.warning(f"Global timeout ({_GLOBAL_TIMEOUT}s) reached, processed {n_done}/{len(futures)} papers")
+        finally:
+            exec_pool.shutdown(wait=False, cancel_futures=True)
         return papers
 
 registered_retrievers = {}
