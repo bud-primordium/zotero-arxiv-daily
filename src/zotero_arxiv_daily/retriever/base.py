@@ -4,6 +4,8 @@ from ..protocol import Paper, RawPaperItem
 from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
 from typing import Type
 from loguru import logger
+import os
+import signal
 
 _GLOBAL_TIMEOUT = 1200  # 20 minutes max for all papers
 
@@ -40,6 +42,11 @@ class BaseRetriever(ABC):
             logger.warning(f"Global timeout ({_GLOBAL_TIMEOUT}s) reached, processed {n_done}/{len(futures)} papers")
         finally:
             exec_pool.shutdown(wait=False, cancel_futures=True)
+            for pid in exec_pool._processes:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
         return papers
 
 registered_retrievers = {}
