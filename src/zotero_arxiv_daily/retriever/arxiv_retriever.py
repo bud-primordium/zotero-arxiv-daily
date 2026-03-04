@@ -5,7 +5,7 @@ from ..protocol import Paper
 from ..utils import extract_markdown_from_pdf
 from tempfile import TemporaryDirectory
 import feedparser
-from urllib.request import urlretrieve
+from urllib.request import urlopen
 from tqdm import tqdm
 import os
 from loguru import logger
@@ -47,7 +47,9 @@ class ArxivRetriever(BaseRetriever):
         try:
             with TemporaryDirectory() as temp_dir:
                 path = os.path.join(temp_dir, "paper.pdf")
-                urlretrieve(pdf_url, path)
+                resp = urlopen(pdf_url, timeout=60)
+                with open(path, 'wb') as f:
+                    f.write(resp.read())
                 full_text = extract_markdown_from_pdf(path)
         except Exception as e:
             logger.warning(f"Failed to extract full text of {title}: {e}")

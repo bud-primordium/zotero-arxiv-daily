@@ -22,18 +22,18 @@ class BaseRetriever(ABC):
         raw_papers = self._retrieve_raw_papers()
         papers = []
         logger.info("Processing papers...")
-        with ProcessPoolExecutor(max_workers=self.config.executor.max_workers) as exec_pool:
-            futures = {exec_pool.submit(self.convert_to_paper, rp): rp for rp in raw_papers}
-            for future in as_completed(futures):
-                try:
-                    paper = future.result(timeout=120)
-                    if paper is not None:
-                        papers.append(paper)
-                except TimeoutError:
-                    logger.warning(f"Timeout processing paper, skipping")
-                    future.cancel()
-                except Exception as e:
-                    logger.warning(f"Error processing paper: {e}")
+        exec_pool = ProcessPoolExecutor(max_workers=self.config.executor.max_workers)
+        futures = {exec_pool.submit(self.convert_to_paper, rp): rp for rp in raw_papers}
+        for future in as_completed(futures, timeout=len(raw_papers) * 120):
+            try:
+                paper = future.result(timeout=10)
+                if paper is not None:
+                    papers.append(paper)
+            except TimeoutError:
+                logger.warning("Timeout processing paper, skipping")
+            except Exception as e:
+                logger.warning(f"Error processing paper: {e}")
+        exec_pool.shutdown(wait=False, cancel_futures=True)
         return papers
 
 registered_retrievers = {}
