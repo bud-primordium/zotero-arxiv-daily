@@ -42,7 +42,7 @@ class BaseRetriever(ABC):
             logger.warning(f"Global timeout ({_GLOBAL_TIMEOUT}s) reached, processed {n_done}/{len(futures)} papers")
         finally:
             exec_pool.shutdown(wait=False, cancel_futures=True)
-            for pid in exec_pool._processes:
+            for pid in (exec_pool._processes or {}):
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
